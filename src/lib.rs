@@ -1,3 +1,5 @@
+pub mod player_path;
+
 #[cfg(test)]
 mod tests {
     #[test]
