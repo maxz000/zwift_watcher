@@ -20,7 +20,7 @@ impl WayPoint {
         }
     }
 
-    pub fn from(player: Player) -> Self {
+    pub fn from(player: &Player) -> Self {
         WayPoint {
             time: player.world_time,
             x: player.x as f64,
@@ -93,7 +93,7 @@ impl Path {
 
     }
 
-    pub fn position_at(&self, time: i64) -> Option<WayPoint> {
+    pub fn position_at_time(&self, time: i64) -> Option<WayPoint> {
 
         let mut before: Option<&WayPoint> = None;
         let mut after: Option<&WayPoint> = None;
@@ -184,8 +184,8 @@ mod tests {
             let point = WayPoint::new(x as f64 * 200., 0., x * 2);
             path.push(point);
         }
-        assert!(path.position_at(3).unwrap().x - 300. < 0.0001);
-        assert_eq!(path.position_at(4).unwrap().x, 400.);
+        assert!(path.position_at_time(3).unwrap().x - 300. < 0.0001);
+        assert_eq!(path.position_at_time(4).unwrap().x, 400.);
     }
 
 }
