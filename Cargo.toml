@@ -8,3 +8,6 @@ edition = "2018"
 
 [dependencies]
 zwift_capture = { git = "https://github.com/maxz000/zwift_capture", branch = "main" }
+
+[dev-dependencies]
+hex-literal = "0.3.1"

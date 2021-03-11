@@ -3,6 +3,10 @@ use std::collections::HashMap;
 
 pub mod player_path;
 
+
+const MAX_WORLD_TIME_DIFF: i64 = 5000; // 5 sec
+
+
 pub struct PlayerData {
     pub id: i32,
     pub world_time: i64,
@@ -62,13 +66,110 @@ impl World {
             groups_by_id: HashMap::new()
         }
     }
+
+    fn update_world_time(&mut self, new_time: i64) {
+        if self.world_time < new_time {
+            self.world_time = new_time;
+        }
+    }
+
+    fn update_players_group(&mut self, group_id: i32, player_id: i32) {
+        if let Some(group) = self.groups_by_id.get_mut(&group_id) {
+            if !group.contains(&player_id) {
+                group.push(player_id);
+            }
+        } else {
+            self.groups_by_id.insert(group_id, vec![player_id]);
+        }
+
+        for (&key, values) in self.groups_by_id.iter_mut() {
+            if key == group_id { continue }
+
+            if let Some(index) = values.iter().position(|&x| x == player_id) {
+                values.remove(index);
+            }
+        }
+    }
+
+    pub fn push_player(&mut self, player: Player) -> Option<i32> {
+        let player_id = player.id;
+        let group_id = player.group_id;
+        let world_time = player.world_time;
+
+        if let Some(player_data) = self.players_by_id.get_mut(&player.id) {
+            let _ = player_data.update(player);
+        } else {
+            let player_data = PlayerData::new(player);
+            self.players_by_id.insert(player_id, player_data);
+        }
+
+        self.update_players_group(group_id, player_id);
+        self.update_world_time(world_time);
+
+        Some(player_id)
+    }
+
+    pub fn push_players_batch(&mut self, players: Vec<Player>) -> Option<Vec<i32>> {
+        let mut result = Vec::new();
+        for player in players.into_iter() {
+            if let Some(player_id) = self.push_player(player) {
+                result.push(player_id);
+            }
+        }
+        Some(result)
+    }
+
+    pub fn clear_player(&mut self, player_id: i32) {
+        for (_, values) in self.groups_by_id.iter_mut() {
+            if let Some(index) = values.iter().position(|&x| x == player_id) {
+                values.remove(index);
+            }
+        }
+        if self.players_by_id.contains_key(&player_id) {
+            self.players_by_id.remove(&player_id);
+        }
+    }
+
+    pub fn find_outdated_players(&mut self) -> Option<Vec<i32>> {
+        let mut result = Vec::new();
+        for (&player_id, player_data) in self.players_by_id.iter_mut() {
+            if self.world_time - player_data.world_time > MAX_WORLD_TIME_DIFF {
+                result.push(player_id);
+            }
+        }
+        Some(result)
+    }
 }
 
 
 #[cfg(test)]
 mod tests {
+
+    use hex_literal::hex;
+    use zwift_capture::ZwiftMessage;
+    use super::*;
+
+    fn get_player_instance() -> Player {
+        let packet_payload = hex!("0686a9010008011086d30618e1a6fbcce80520ab023a6e0886d30610e1a6fbcce8051800208fac3a2800300040f4fa860548005000584f600068cbd5aa0170c0843d7800800100980195809808a0018f808008a80100b80100c00100cd01ae378847d50119191a46dd01a0d52ec7e00186d306e80100f80100950200000000980206b002001f403176");
+        let message = ZwiftMessage::ToServer(&packet_payload);
+        let mut players = message.get_players().unwrap();
+        players.pop().unwrap()
+    }
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn world_push_player() {
+        let mut world = World::new();
+        let player = get_player_instance();
+        let player_two = get_player_instance();
+        world.push_player(player);
+        assert_eq!(world.world_time, player_two.world_time);
+    }
+
+    #[test]
+    fn world_clear_player() {
+        let mut world = World::new();
+        world.push_player(get_player_instance());
+        world.update_world_time(world.world_time + 1 + MAX_WORLD_TIME_DIFF);
+        assert_eq!(world.find_outdated_players().unwrap().len(), 1);
     }
 }
