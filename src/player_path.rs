@@ -2,6 +2,7 @@ use zwift_capture::Player;
 
 
 const PATH_CAPACITY: usize = 20;
+const MOTION_VECTOR_TIME_DIFF: i64 = 2000; // 2 sec
 
 
 #[derive(Debug)]
@@ -45,6 +46,12 @@ impl WayPoint {
             x: from.x + delta_x,
             y: from.y + delta_y
         })
+    }
+
+    pub fn get_motion_vector(from: &WayPoint, to: &WayPoint) -> Vec<f64> {
+        let motion_vec = vec![to.x - from.x, to.y - from.y];
+        let length = (motion_vec[0].powi(2) + motion_vec[1].powi(2)).sqrt();
+        vec![motion_vec[0] / length, motion_vec[1] / length]
     }
 
     pub fn calculate_distance(&self, other: &WayPoint) -> f64 {
@@ -114,6 +121,15 @@ impl Path {
         if let Some(before) = before {
             if let Some(after) = after {
                 return WayPoint::interpolate(before, after, time);
+            }
+        }
+        None
+    }
+
+    pub fn motion_vector_for_waypoint(&self, waypoint: &WayPoint) -> Option<Vec<f64>> {
+        for prev_point in self.path.iter() {
+            if waypoint.time - prev_point.time > MOTION_VECTOR_TIME_DIFF {
+                return Some(WayPoint::get_motion_vector(prev_point, waypoint));
             }
         }
         None
