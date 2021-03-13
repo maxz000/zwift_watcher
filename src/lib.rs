@@ -49,13 +49,77 @@ impl PlayerData {
         self.path.position_at_time(time)
     }
 
+    pub fn motion_vector(&self, waypoint: player_path::WayPoint) -> Option<Vec<f64>> {
+        self.path.motion_vector_for_waypoint(&waypoint)
+    }
+
+}
+
+
+pub struct PlayerGroup {
+    players: Vec<i32>
+}
+
+impl PlayerGroup {
+    pub fn new() -> Self {
+        PlayerGroup {
+            players: Vec::with_capacity(10)
+        }
+    }
+
+    pub fn from(users: &[i32]) -> Self {
+        PlayerGroup {
+            players: Vec::from(users)
+        }
+    }
+
+    pub fn iter(&self) -> PlayerGroupIter {
+        PlayerGroupIter {
+            players: self.players.clone(),
+            index: 0
+        }
+    }
+
+    pub fn add_player(&mut self, user_id: i32) {
+        if !self.players.contains(&user_id) {
+            self.players.push(user_id);
+        }
+    }
+
+    pub fn remove_player(&mut self, user_id: i32) {
+        if let Some(index) = self.players.iter().position(|&x| x == user_id) {
+            self.players.remove(index);
+        }
+    }
+
+    pub fn has_player(&self, user_id: i32) -> bool {
+        self.players.contains(&user_id)
+    }
+}
+
+pub struct PlayerGroupIter {
+    players: Vec<i32>,
+    index: usize
+}
+
+impl Iterator for PlayerGroupIter {
+    type Item = i32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.players.len() {
+            self.index += 1;
+            return Some(self.players[self.index - 1]);
+        }
+        None
+    }
 }
 
 
 pub struct World {
     pub world_time: i64,
+
     pub players_by_id: HashMap<i32, PlayerData>,
-    pub groups_by_id: HashMap<i32, Vec<i32>>
+    pub groups_by_id: HashMap<i32, PlayerGroup>
 }
 
 impl World {
@@ -75,19 +139,14 @@ impl World {
 
     fn update_players_group(&mut self, group_id: i32, player_id: i32) {
         if let Some(group) = self.groups_by_id.get_mut(&group_id) {
-            if !group.contains(&player_id) {
-                group.push(player_id);
-            }
+            group.add_player(player_id);
         } else {
-            self.groups_by_id.insert(group_id, vec![player_id]);
+            self.groups_by_id.insert(group_id, PlayerGroup::from(&[player_id]));
         }
 
-        for (&key, values) in self.groups_by_id.iter_mut() {
+        for (&key, group) in self.groups_by_id.iter_mut() {
             if key == group_id { continue }
-
-            if let Some(index) = values.iter().position(|&x| x == player_id) {
-                values.remove(index);
-            }
+            group.remove_player(player_id);
         }
     }
 
@@ -120,10 +179,8 @@ impl World {
     }
 
     pub fn clear_player(&mut self, player_id: i32) {
-        for (_, values) in self.groups_by_id.iter_mut() {
-            if let Some(index) = values.iter().position(|&x| x == player_id) {
-                values.remove(index);
-            }
+        for (_, group) in self.groups_by_id.iter_mut() {
+            group.remove_player(player_id);
         }
         if self.players_by_id.contains_key(&player_id) {
             self.players_by_id.remove(&player_id);
@@ -171,5 +228,17 @@ mod tests {
         world.push_player(get_player_instance());
         world.update_world_time(world.world_time + 1 + MAX_WORLD_TIME_DIFF);
         assert_eq!(world.find_outdated_players().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn user_group_iter() {
+        let mut group = PlayerGroup::new();
+        group.add_player(0);
+        group.add_player(1);
+        let mut a = 0;
+        for x in group.iter() {
+            assert_eq!(x, a);
+            a += 1;
+        }
     }
 }
