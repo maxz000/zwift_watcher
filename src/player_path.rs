@@ -4,6 +4,13 @@ use zwift_capture::Player;
 const PATH_CAPACITY: usize = 20;
 const MOTION_VECTOR_TIME_DIFF: i64 = 2000; // 2 sec
 
+pub type MotionVector = [f64; 2];
+
+
+pub fn is_collinear_2d(first: MotionVector, second: MotionVector, delta: f64) -> bool {
+    ((first[0] - second[0]).abs() < delta) & ((first[1] - second[1]).abs() < delta)
+}
+
 
 #[derive(Debug)]
 pub struct WayPoint {
@@ -48,10 +55,10 @@ impl WayPoint {
         })
     }
 
-    pub fn get_motion_vector(from: &WayPoint, to: &WayPoint) -> Vec<f64> {
+    pub fn get_motion_vector(from: &WayPoint, to: &WayPoint) -> MotionVector {
         let motion_vec = vec![to.x - from.x, to.y - from.y];
         let length = (motion_vec[0].powi(2) + motion_vec[1].powi(2)).sqrt();
-        vec![motion_vec[0] / length, motion_vec[1] / length]
+        [motion_vec[0] / length, motion_vec[1] / length]
     }
 
     pub fn calculate_distance(&self, other: &WayPoint) -> f64 {
@@ -126,7 +133,7 @@ impl Path {
         None
     }
 
-    pub fn motion_vector_for_waypoint(&self, waypoint: &WayPoint) -> Option<Vec<f64>> {
+    pub fn motion_vector_to_waypoint(&self, waypoint: &WayPoint) -> Option<MotionVector> {
         for prev_point in self.path.iter() {
             if waypoint.time - prev_point.time > MOTION_VECTOR_TIME_DIFF {
                 return Some(WayPoint::get_motion_vector(prev_point, waypoint));
@@ -138,8 +145,7 @@ impl Path {
 
 #[cfg(test)]
 mod tests {
-    use super::{Path,WayPoint};
-    use crate::player_path::PATH_CAPACITY;
+    use super::{Path,WayPoint,PATH_CAPACITY, MotionVector, is_collinear_2d};
 
     #[test]
     fn waypoint_interpolation() {
@@ -202,6 +208,16 @@ mod tests {
         }
         assert!(path.position_at_time(3).unwrap().x - 300. < 0.0001);
         assert_eq!(path.position_at_time(4).unwrap().x, 400.);
+    }
+
+    #[test]
+    fn motion_vector() {
+        let v1 = [0.2, 0.2] as MotionVector;
+        let v2 = [0.2, 0.2] as MotionVector;
+        let v3 = [0.1, 0.2] as MotionVector;
+        assert_eq!(is_collinear_2d(v1, v2, 0.000000001), true);
+        assert_eq!(is_collinear_2d(v1, v3, 0.0001), false);
+        assert_eq!(is_collinear_2d(v1, v3, 0.2), true);
     }
 
 }

@@ -49,8 +49,8 @@ impl PlayerData {
         self.path.position_at_time(time)
     }
 
-    pub fn motion_vector(&self, waypoint: player_path::WayPoint) -> Option<Vec<f64>> {
-        self.path.motion_vector_for_waypoint(&waypoint)
+    pub fn motion_vector_to_waypoint(&self, waypoint: player_path::WayPoint) -> Option<player_path::MotionVector> {
+        self.path.motion_vector_to_waypoint(&waypoint)
     }
 
 }
