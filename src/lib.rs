@@ -150,7 +150,7 @@ impl World {
         }
     }
 
-    pub fn push_player(&mut self, player: Player) -> Option<i32> {
+    pub fn push_player(&mut self, player: Player) -> Option<i64> {
         let player_id = player.id;
         let group_id = player.group_id;
         let world_time = player.world_time;
@@ -165,14 +165,14 @@ impl World {
         self.update_players_group(group_id, player_id);
         self.update_world_time(world_time);
 
-        Some(player_id)
+        Some(world_time)
     }
 
-    pub fn push_players_batch(&mut self, players: Vec<Player>) -> Option<Vec<i32>> {
+    pub fn push_players_batch(&mut self, players: Vec<Player>) -> Option<Vec<i64>> {
         let mut result = Vec::new();
         for player in players.into_iter() {
-            if let Some(player_id) = self.push_player(player) {
-                result.push(player_id);
+            if let Some(time) = self.push_player(player) {
+                result.push(time);
             }
         }
         Some(result)
@@ -195,6 +195,10 @@ impl World {
             }
         }
         Some(result)
+    }
+
+    pub fn get_player(&self, player_id: i32) -> Option<&PlayerData> {
+        self.players_by_id.get(&player_id)
     }
 }
 
