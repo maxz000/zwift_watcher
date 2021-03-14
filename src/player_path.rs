@@ -3,6 +3,7 @@ use zwift_capture::Player;
 
 const PATH_CAPACITY: usize = 20;
 const MOTION_VECTOR_TIME_DIFF: i64 = 2000; // 2 sec
+const VECTOR_DELTA: f64 = 0.0001;
 
 pub struct MotionVector (f64, f64);
 

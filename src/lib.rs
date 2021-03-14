@@ -197,8 +197,49 @@ impl World {
         Some(result)
     }
 
-    pub fn get_player(&self, player_id: i32) -> Option<&PlayerData> {
+    pub fn get_groups_list(&self) -> Option<Vec<i32>> {
+        let keys: Vec<i32> = self.groups_by_id.keys().cloned().collect();
+        Some(keys)
+    }
+
+    pub fn get_group(&self, group_id: i32) -> Option<&PlayerGroup> {
+        self.groups_by_id.get(&group_id)
+    }
+
+    pub fn get_players_list(&self) -> Option<Vec<i32>> {
+        let keys: Vec<i32> = self.players_by_id.keys().cloned().collect();
+        Some(keys)
+    }
+
+    pub fn get_player_data(&self, player_id: i32) -> Option<&PlayerData> {
         self.players_by_id.get(&player_id)
+    }
+
+    pub fn get_latest_world_time_for_group(&self, group: &PlayerGroup) -> i64 {
+        let mut min_time = self.world_time;
+        for player_id in group.iter() {
+            if let Some(player_data) = self.get_player_data(player_id) {
+                if player_data.world_time < min_time {
+                    min_time = player_data.world_time;
+                }
+            }
+        }
+        min_time
+    }
+
+    pub fn calculate_group_positions(&self, group: &PlayerGroup, time: i64) -> () {
+        for player_id in group.iter() {
+            if let Some(player_data) = self.get_player_data(player_id) {
+                if let Some(player_position) = player_data.position_at_time(time) {
+                    if let Some(motion_vector) = player_data.motion_vector_to_waypoint(player_position) {
+                        let distance = player_data.get().distance;
+                        // todo
+                    }
+                }
+            }
+        }
+
+        ()
     }
 }
 
