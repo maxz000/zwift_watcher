@@ -3,8 +3,101 @@ use std::collections::HashMap;
 
 pub mod player_path;
 
-
+const PLAYER_HISTORY_CAPACITY: usize = 20;
 const MAX_WORLD_TIME_DIFF: i64 = 5000; // 5 sec
+const PLAYER_HISTORY_INTERPOLATION_MAX_TIME_DIFF: i64 = 100;
+
+
+struct PlayerHistory {
+    // latest first
+    data: Vec<Player>
+}
+
+impl PlayerHistory {
+    pub fn new() -> Self {
+        PlayerHistory {
+            data: Vec::with_capacity(PLAYER_HISTORY_CAPACITY)
+        }
+    }
+
+    pub fn push(&mut self, new_player: Player) {
+        let mut insert_index = 0;
+        for (ix, player_data) in self.data.iter().enumerate() {
+            if player_data.world_time > new_player.world_time {
+                insert_index = ix + 1;
+            } else {
+                break;
+            }
+        }
+        self.data.insert(insert_index, new_player);
+        if self.data.len() > PLAYER_HISTORY_CAPACITY - 1 {
+            self.data.pop();
+        }
+    }
+
+    fn interpolate(&self, before: &Player, after: &Player, time: i64) -> Player {
+        let time_delta = after.world_time - before.world_time;
+        let requested_time_delta = time - before.world_time;
+        let ratio = requested_time_delta as f32 / time_delta as f32;
+
+        let mut player = before.clone();
+        player.world_time = time;
+        player.x = (after.x - before.x) * ratio;
+        player.y = (after.y - before.y) * ratio;
+
+        player
+    }
+
+    fn find_nearest_known_points(&self, time: i64) -> (Option<&Player>, Option<&Player>) {
+        let mut before: Option<&Player> = None;
+        let mut after: Option<&Player> = None;
+
+        for player in self.data.iter() {
+            if player.world_time == time {
+                return (Some(player), Some(player));
+            }
+
+            if player.world_time > time {
+                after = Some(player);
+            } else if player.world_time < time {
+                before = Some(player);
+                break;
+            }
+        }
+
+        (before, after)
+    }
+
+    pub fn get_at_time(&self, time: i64) -> Option<Player> {
+
+        let (before, after) = self.find_nearest_known_points(time);
+
+        return match (before, after) {
+            (Some(before), Some(after)) => {
+                if before.world_time == after.world_time {
+                    Some(before.clone())
+                } else {
+                    Some(self.interpolate(before, after, time))
+                }
+            },
+            (Some(before), None) => {
+                if before.world_time - time < PLAYER_HISTORY_INTERPOLATION_MAX_TIME_DIFF {
+                    Some(before.clone())
+                } else {
+                    None
+                }
+            },
+            (None, Some(after)) => {
+                if time - after.world_time < PLAYER_HISTORY_INTERPOLATION_MAX_TIME_DIFF {
+                    Some(after.clone())
+                } else {
+                    None
+                }
+            }
+            _ => None
+        }
+    }
+}
 
 
 pub struct PlayerData {
