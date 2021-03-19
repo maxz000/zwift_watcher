@@ -1,11 +1,11 @@
 use zwift_capture::Player;
 use std::collections::HashMap;
 
-pub mod player_path;
 
+const PLAYER_GROUP_CAPACITY: usize = 10;
 const PLAYER_HISTORY_CAPACITY: usize = 20;
-const MAX_WORLD_TIME_DIFF: i64 = 5000; // 5 sec
 const PLAYER_HISTORY_INTERPOLATION_MAX_TIME_DIFF: i64 = 100;
+const MAX_WORLD_TIME_DIFF: i64 = 5000; // 5 sec
 
 
 struct PlayerHistory {
@@ -18,6 +18,14 @@ impl PlayerHistory {
         PlayerHistory {
             data: Vec::with_capacity(PLAYER_HISTORY_CAPACITY)
         }
+    }
+
+    pub fn from(new_player: Player) -> Self {
+        let mut history = PlayerHistory {
+            data: Vec::with_capacity(PLAYER_HISTORY_CAPACITY)
+        };
+        history.push(new_player);
+        history
     }
 
     pub fn push(&mut self, new_player: Player) {
@@ -104,20 +112,15 @@ impl PlayerHistory {
 pub struct PlayerData {
     pub id: i32,
     pub world_time: i64,
-    data: Player,
-    path: player_path::Path
+    history: PlayerHistory,
 }
 
 impl PlayerData {
     pub fn new(player: Player) -> Self {
-        let mut path = player_path::Path::new();
-        path.push(player_path::WayPoint::from(&player));
-
         PlayerData {
             id: player.id,
             world_time: player.world_time,
-            data: player,
-            path: path
+            history: PlayerHistory::from(player),
         }
     }
 
@@ -126,30 +129,27 @@ impl PlayerData {
             return Err("Invalid player id");
         }
 
-        self.path.push(player_path::WayPoint::from(&player));
-
         if self.world_time < player.world_time {
             self.world_time = player.world_time;
-            self.data = player;
         }
+
+        self.history.push(player);
+
         Ok(self.world_time)
     }
 
-    pub fn get(&self) -> &Player {
-        &self.data
+    pub fn get(&self) -> Option<Player> {
+        self.history.get_at_time(self.world_time)
     }
 
-    pub fn position_at_time(&self, time: i64) -> Option<player_path::WayPoint> {
-        self.path.position_at_time(time)
-    }
-
-    pub fn motion_vector_to_waypoint(&self, waypoint: player_path::WayPoint) -> Option<player_path::MotionVector> {
-        self.path.motion_vector_to_waypoint(&waypoint)
+    pub fn get_at_time(&self, time: i64) -> Option<Player> {
+        self.history.get_at_time(time)
     }
 
 }
 
 
+#[derive(Debug,Clone)]
 pub struct PlayerGroup {
     players: Vec<i32>
 }
@@ -157,7 +157,7 @@ pub struct PlayerGroup {
 impl PlayerGroup {
     pub fn new() -> Self {
         PlayerGroup {
-            players: Vec::with_capacity(10)
+            players: Vec::with_capacity(PLAYER_GROUP_CAPACITY)
         }
     }
 
@@ -321,20 +321,6 @@ impl World {
         min_time
     }
 
-    pub fn calculate_group_positions(&self, group: &PlayerGroup, time: i64) -> () {
-        for player_id in group.iter() {
-            if let Some(player_data) = self.get_player_data(player_id) {
-                if let Some(player_position) = player_data.position_at_time(time) {
-                    if let Some(motion_vector) = player_data.motion_vector_to_waypoint(player_position) {
-                        let distance = player_data.get().distance;
-                        // todo
-                    }
-                }
-            }
-        }
-
-        ()
-    }
 }
 
 
@@ -346,6 +332,7 @@ mod tests {
     use super::*;
 
     fn get_player_instance() -> Player {
+        // some sample captured data
         let packet_payload = hex!("0686a9010008011086d30618e1a6fbcce80520ab023a6e0886d30610e1a6fbcce8051800208fac3a2800300040f4fa860548005000584f600068cbd5aa0170c0843d7800800100980195809808a0018f808008a80100b80100c00100cd01ae378847d50119191a46dd01a0d52ec7e00186d306e80100f80100950200000000980206b002001f403176");
         let message = ZwiftMessage::ToServer(&packet_payload);
         let mut players = message.get_players().unwrap();
