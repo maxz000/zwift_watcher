@@ -42,6 +42,7 @@ impl PlayerHistory {
 
         let mut player = before.clone();
         player.world_time = time;
+        player.time = before.time + requested_time_delta as i32;
         player.x = (after.x - before.x) * ratio;
         player.y = (after.y - before.y) * ratio;
 
@@ -378,5 +379,73 @@ mod tests {
             assert_eq!(x, a);
             a += 1;
         }
+    }
+
+    #[test]
+    fn player_history_push() {
+        let mut player_history = PlayerHistory::new();
+        let base_player = get_player_instance();
+        for x in (0..2000).step_by(100) {
+            let mut player = base_player.clone();
+            player.world_time = x;
+            player.time = x as i32;
+            player.distance = player.distance + (5 * x) as i32;
+            player.x = player.x + (5 * x) as f32;
+            player_history.push(player);
+        }
+        // test elements count
+        assert_eq!(player_history.data.len(), PLAYER_HISTORY_CAPACITY - 1);
+        // test order - latest first
+        assert_eq!(player_history.data.iter().fold(i64::MAX, |accumulator, x| {
+            if accumulator > x.world_time {
+                x.world_time
+            } else {
+                i64::MIN
+            }
+        }), player_history.data[PLAYER_HISTORY_CAPACITY - 2].world_time);
+    }
+
+    #[test]
+    fn player_history_push_unordered() {
+        let mut player_history = PlayerHistory::new();
+        let base_player = get_player_instance();
+        for x in (0..2000).step_by(100) {
+            let mut player = base_player.clone();
+            player.world_time = x + x % 300;
+            player.time = x as i32;
+            player.distance = player.distance + (5 * x) as i32;
+            player.x = player.x + (5 * x) as f32;
+            player_history.push(player);
+        }
+        // test elements count
+        assert_eq!(player_history.data.len(), PLAYER_HISTORY_CAPACITY - 1);
+        // test order - latest first
+        assert_eq!(player_history.data.iter().fold(i64::MAX, |accumulator, x| {
+            if accumulator > x.world_time {
+                x.world_time
+            } else {
+                i64::MIN
+            }
+        }), player_history.data[PLAYER_HISTORY_CAPACITY - 2].world_time);
+    }
+
+    #[test]
+    fn player_history_get_at_time() {
+        let mut player_history = PlayerHistory::new();
+        let base_player = get_player_instance();
+        let mut one = base_player.clone();
+        let mut two = base_player.clone();
+        one.world_time = 0;
+        one.time = 0;
+        one.x = 0.;
+        two.world_time = 100;
+        two.time = 100;
+        two.x = 100.;
+        player_history.push(one);
+        player_history.push(two);
+        let mid = player_history.get_at_time(50).unwrap();
+        assert_eq!(mid.world_time, 50);
+        assert_eq!(mid.time, 50);
+        assert_eq!(mid.x, 50.);
     }
 }
