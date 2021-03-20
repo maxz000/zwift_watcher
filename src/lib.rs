@@ -189,6 +189,10 @@ impl PlayerGroup {
     pub fn has_player(&self, user_id: i32) -> bool {
         self.players.contains(&user_id)
     }
+
+    pub fn clear(&mut self) {
+        self.players.clear();
+    }
 }
 
 pub struct PlayerGroupIter {
@@ -213,7 +217,8 @@ pub struct World {
     pub world_time: i64,
 
     pub players_by_id: HashMap<i32, PlayerData>,
-    pub groups_by_id: HashMap<i32, PlayerGroup>
+    pub groups_by_id: HashMap<i32, PlayerGroup>,
+    pub group_to_watch: PlayerGroup
 }
 
 impl World {
@@ -221,7 +226,8 @@ impl World {
         World {
             world_time: 0,
             players_by_id: HashMap::new(),
-            groups_by_id: HashMap::new()
+            groups_by_id: HashMap::new(),
+            group_to_watch: PlayerGroup::new()
         }
     }
 
@@ -319,6 +325,14 @@ impl World {
             }
         }
         min_time
+    }
+
+    pub fn add_player_to_watch(&mut self, player_id: i32) {
+        self.group_to_watch.add_player(player_id);
+    }
+
+    pub fn clear_group_to_watch(&mut self) {
+        self.group_to_watch.clear();
     }
 
 }
