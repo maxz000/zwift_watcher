@@ -50,9 +50,10 @@ impl PlayerHistory {
 
         let mut player = before.clone();
         player.world_time = time;
-        player.time = before.time + requested_time_delta as i32;
-        player.x = (after.x - before.x) * ratio;
-        player.y = (after.y - before.y) * ratio;
+        player.time = before.time + requested_time_delta as i32 / 1000;
+        player.x = before.x + (after.x - before.x) * ratio;
+        player.y = before.y + (after.y - before.y) * ratio;
+        player.distance = before.distance + ((after.distance - before.distance) as f32 * ratio) as i32;
 
         player
     }
@@ -439,14 +440,17 @@ mod tests {
         one.world_time = 0;
         one.time = 0;
         one.x = 0.;
+        one.distance = 100;
         two.world_time = 100;
         two.time = 100;
         two.x = 100.;
+        two.distance = 200;
         player_history.push(one);
         player_history.push(two);
         let mid = player_history.get_at_time(50).unwrap();
         assert_eq!(mid.world_time, 50);
-        assert_eq!(mid.time, 50);
+        assert_eq!(mid.time, 0);
         assert_eq!(mid.x, 50.);
+        assert_eq!(mid.distance, 150);
     }
 }
