@@ -8,6 +8,7 @@ const PLAYER_HISTORY_INTERPOLATION_MAX_TIME_DIFF: i64 = 100;
 const MAX_WORLD_TIME_DIFF: i64 = 5000; // 5 sec
 
 
+#[derive(Debug)]
 struct PlayerHistory {
     // latest first
     data: Vec<Player>
@@ -46,14 +47,14 @@ impl PlayerHistory {
     fn interpolate(&self, before: &Player, after: &Player, time: i64) -> Player {
         let time_delta = after.world_time - before.world_time;
         let requested_time_delta = time - before.world_time;
-        let ratio = requested_time_delta as f32 / time_delta as f32;
+        let ratio = requested_time_delta as f64 / time_delta as f64;
 
         let mut player = before.clone();
         player.world_time = time;
         player.time = before.time + requested_time_delta as i32 / 1000;
         player.x = before.x + (after.x - before.x) * ratio;
         player.y = before.y + (after.y - before.y) * ratio;
-        player.distance = before.distance + ((after.distance - before.distance) as f32 * ratio) as i32;
+        player.distance = before.distance + ((after.distance - before.distance) as f64 * ratio) as i32;
 
         player
     }
@@ -90,6 +91,7 @@ impl PlayerHistory {
                     Some(self.interpolate(before, after, time))
                 }
             },
+            // show nearest available data if time difference not so big
             (Some(before), None) => {
                 if before.world_time - time < PLAYER_HISTORY_INTERPOLATION_MAX_TIME_DIFF {
                     Some(before.clone())
@@ -110,6 +112,7 @@ impl PlayerHistory {
 }
 
 
+#[derive(Debug)]
 pub struct PlayerData {
     pub id: i32,
     pub world_time: i64,
@@ -139,7 +142,7 @@ impl PlayerData {
         Ok(self.world_time)
     }
 
-    pub fn get(&self) -> Option<Player> {
+    pub fn get_latest(&self) -> Option<Player> {
         self.history.get_at_time(self.world_time)
     }
 
@@ -392,7 +395,7 @@ mod tests {
             player.world_time = x;
             player.time = x as i32;
             player.distance = player.distance + (5 * x) as i32;
-            player.x = player.x + (5 * x) as f32;
+            player.x = player.x + (5 * x) as f64;
             player_history.push(player);
         }
         // test elements count
@@ -416,7 +419,7 @@ mod tests {
             player.world_time = x + x % 300;
             player.time = x as i32;
             player.distance = player.distance + (5 * x) as i32;
-            player.x = player.x + (5 * x) as f32;
+            player.x = player.x + (5 * x) as f64;
             player_history.push(player);
         }
         // test elements count
