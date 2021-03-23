@@ -87,16 +87,17 @@ async fn main() {
         println!("Capture thread: start");
 
         // real capture device
-        // let capture = ZwiftCapture::new();
+        let capture = ZwiftCapture::new();
 
         // local test file
-        let capture = ZwiftCapture::from_file(path::Path::new("zwift_meetup.pcapng"));
+        // let capture = ZwiftCapture::from_file(path::Path::new("zwift_meetup.pcapng"));
+
         for players in capture {
             let mut world_capture = world_capture.lock().unwrap();
             let _times = world_capture.push_players_batch(players).unwrap();
 
             // only for local file
-            thread::sleep(time::Duration::from_millis(100));
+            // thread::sleep(time::Duration::from_millis(100));
 
             counter += 1;
             if counter % TICK == 0 {
