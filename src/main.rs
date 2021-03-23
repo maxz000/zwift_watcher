@@ -2,9 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time;
 use std::path;
-use serde::{Serialize,Deserialize};
-use serde_json::Map;
-use warp::{http,Filter};
+use warp::Filter;
 use zwift_capture::{Player,ZwiftCapture};
 use zwift_watcher::{World,PlayerGroup,PlayerData,PLAYER_GROUP_CAPACITY};
 use std::iter::FromIterator;
@@ -12,52 +10,68 @@ use std::iter::FromIterator;
 
 const TICK: i64 = 1000;
 
+mod models {
+    use serde::{Serialize,Deserialize};
 
-#[derive(Debug,Deserialize,Serialize,Clone)]
-struct PlayerRequest {
-    id: i32
+    #[derive(Debug,Deserialize,Serialize,Clone)]
+    pub struct PLayerQuery {
+        pub id: i32
+    }
+
+    #[derive(Debug,Deserialize,Serialize,Clone)]
+    pub struct WatchOptions {
+        pub latest: Option<String>
+    }
 }
 
+mod handlers {
+    use super::*;
 
-async fn api_root(world: Arc<Mutex<World>>) -> Result<impl warp::Reply, warp::Rejection> {
-    let world = world.lock().unwrap();
-    Ok(warp::reply::json(&serde_json::json!({
-        "result": "ok",
-        "data": {
-            "world_time": world.world_time,
-            "group_to_watch": Vec::<i32>::from_iter(world.group_to_watch.iter())
-        }
-    })))
-}
+    pub async fn api_root(world: Arc<Mutex<World>>) -> Result<impl warp::Reply, warp::Rejection> {
+        let world = world.lock().unwrap();
+        Ok(warp::reply::json(&serde_json::json!({
+            "result": "ok",
+            "data": {
+                "world_time": world.world_time,
+                "group_to_watch": Vec::<i32>::from_iter(world.group_to_watch.iter())
+            }
+        })))
+    }
 
-
-async fn get_group_to_watch(world: Arc<Mutex<World>>) -> Result<impl warp::Reply, warp::Rejection> {
-    let world = world.lock().unwrap();
-    let mut result = Vec::with_capacity(PLAYER_GROUP_CAPACITY);
-    let latest_time = world.get_latest_world_time_for_group(&world.group_to_watch);
-    for player_id in world.group_to_watch.iter() {
-        if let Some(player) = world.get_player_data(player_id) {
-            if let Some(data) = player.get_at_time(latest_time) {
-                result.push(data);
+    pub async fn get_group_to_watch(options: models::WatchOptions, world: Arc<Mutex<World>>) -> Result<impl warp::Reply, warp::Rejection> {
+        let world = world.lock().unwrap();
+        let mut result = Vec::with_capacity(PLAYER_GROUP_CAPACITY);
+        let latest_time = match &options.latest {
+            Some(_) => world.world_time,
+            _ => world.get_latest_world_time_for_group(&world.group_to_watch)
+        };
+        for player_id in world.group_to_watch.iter() {
+            if let Some(player) = world.get_player_data(player_id) {
+                if let Some(data) = match &options.latest {
+                    Some(_) => player.get_latest(),
+                    _ => player.get_at_time(latest_time)
+                } {
+                    result.push(data);
+                }
             }
         }
+        Ok(warp::reply::json(&serde_json::json!({
+            "result": "ok",
+            "data": result
+        })))
     }
-    Ok(warp::reply::json(&serde_json::json!({
-        "result": "ok",
-        "data": result
-    })))
-}
 
+    pub async fn add_player_to_watch(player: models::PLayerQuery, world: Arc<Mutex<World>>) -> Result<impl warp::Reply, warp::Rejection> {
+        let mut world = world.lock().unwrap();
+        world.add_player_to_watch(player.id);
+        Ok(warp::reply::json(&serde_json::json!({
+            "result": "ok",
+            "data": {
+                "id": player.id
+            }
+        })))
+    }
 
-async fn add_player_to_watch(player: PlayerRequest, world: Arc<Mutex<World>>) -> Result<impl warp::Reply, warp::Rejection> {
-    let mut world = world.lock().unwrap();
-    world.add_player_to_watch(player.id);
-    Ok(warp::reply::json(&serde_json::json!({
-        "result": "ok",
-        "data": {
-            "id": player.id
-        }
-    })))
 }
 
 
@@ -97,13 +111,14 @@ async fn main() {
 
     let root_url = warp::path::end()
         .and(world_filter.clone())
-        .and_then(api_root);
+        .and_then(handlers::api_root);
 
     let get_group_to_watch_url = warp::get()
         .and(warp::path("watch"))
         .and(warp::path::end())
+        .and(warp::query::<models::WatchOptions>())
         .and(world_filter.clone())
-        .and_then(get_group_to_watch);
+        .and_then(handlers::get_group_to_watch);
 
     let add_player_url = warp::post()
         .and(warp::path("watch"))
@@ -111,7 +126,7 @@ async fn main() {
         .and(warp::path::end())
         .and(warp::body::json())
         .and(world_filter.clone())
-        .and_then(add_player_to_watch);
+        .and_then(handlers::add_player_to_watch);
 
     let routes = root_url.or(get_group_to_watch_url).or(add_player_url);
     let _ = warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
