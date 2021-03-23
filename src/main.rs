@@ -74,6 +74,15 @@ mod handlers {
         })))
     }
 
+    pub async fn clear_group_to_watch(world: Arc<Mutex<World>>) -> Result<impl warp::Reply, warp::Rejection> {
+        let mut world = world.lock().unwrap();
+        world.clear_group_to_watch();
+        Ok(warp::reply::json(&serde_json::json!({
+            "result": "ok",
+            "data": {}
+        })))
+    }
+
 }
 
 
@@ -97,7 +106,7 @@ async fn main() {
     let mut input_str = String::new();
     stdin().read_line(&mut input_str).expect("invalid value");
     let choice: usize = input_str.trim().parse().unwrap();
-    let mut selected_device = devices_list.remove(choice);
+    let selected_device = devices_list.remove(choice);
 
     println!("Selected device: {:?}", selected_device);
     let capture = ZwiftCapture::from_device(selected_device);
@@ -146,7 +155,15 @@ async fn main() {
         .and(world_filter.clone())
         .and_then(handlers::add_player_to_watch);
 
-    let routes = root_url.or(get_group_to_watch_url).or(add_player_url);
+    let clear_group_to_watch_url = warp::delete()
+        .and(warp::path("watch"))
+        .and(warp::path("clear"))
+        .and(warp::path::end())
+        .and(world_filter.clone())
+        .and_then(handlers::clear_group_to_watch);
+
+    let routes = root_url.or(get_group_to_watch_url)
+        .or(add_player_url).or(clear_group_to_watch_url);
     let _ = warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 
     let _ =capture_thread.join();

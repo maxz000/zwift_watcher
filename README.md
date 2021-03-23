@@ -87,3 +87,17 @@ or
     date: Tue, 23 Mar 2021 07:22:02 GMT
     
     {"data":{"id":108934},"result":"ok"}
+
+
+## Add player to watch group
+### Request
+`DELETE /watch/clear `
+
+    curl -i -X DELETE localhost:3030/watch/clear
+### Response
+    HTTP/1.1 200 OK
+    content-type: application/json
+    content-length: 36
+    date: Tue, 23 Mar 2021 07:22:03 GMT
+    
+    {"data":{},"result":"ok"}

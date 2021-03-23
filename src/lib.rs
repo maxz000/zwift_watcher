@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 
 pub const PLAYER_GROUP_CAPACITY: usize = 10;
-const PLAYER_HISTORY_CAPACITY: usize = 20;
+const PLAYER_HISTORY_CAPACITY: usize = 50; // ~ 100ms per player update == 5sec history
 const PLAYER_HISTORY_INTERPOLATION_MAX_TIME_DIFF: i64 = 100;
 const MAX_WORLD_TIME_DIFF: i64 = 5000; // 5 sec
 
