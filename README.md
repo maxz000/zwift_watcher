@@ -9,6 +9,32 @@ Secondary trying to recreate and interpolate riders position on the map for give
 Which may provide more accurate data for distance or time difference for riders in private "meetups",
 automatically divide riders by groups (breakaway, peleton, gruppetto) etc.
 
+# Installation
+## Windows
+
+In README for pcap crate https://github.com/ebfull/pcap recommended  to use WinPcap, but it works well with newest NpCap
+
+Install NpCap https://nmap.org/npcap/ . 
+Download and extract NpCap SDK.
+Add the /Lib folder from SDK to your LIB environment variable.
+
+You can build it as you want, but for me works only with 
+`stable-i686-pc-windows-msvc` toolchain
+
+## Linux
+Zwift not available on linux, but you can build and use this project with `.pcap` files
+
+On Debian based Linux, install `libpcap-dev`. If not running as root, you need to set capabilities like so: sudo setcap cap_net_raw,cap_net_admin=eip path/to/bin
+
+On RedHat \ Fedora install `libpcap-devel`
+
+Build with you preferred rust toolchain
+
+## MacOS X
+
+libpcap should be installed on Mac OS X by default.
+I don't have one, assuming it will works well as on linux
+
 # REST API
 ## Get basic info
 latest world time and list of player ids in watchlist
