@@ -9,6 +9,10 @@ Secondary trying to recreate and interpolate riders position on the map for give
 Which may provide more accurate data for distance or time difference for riders in private "meetups",
 automatically divide riders by groups (breakaway, peleton, gruppetto) etc.
 
+# GUI widget
+
+watch there [ZwiftTeamView](https://github.com/maxz000/ZwiftTeamView)
+
 # Installation
 ## Windows
 
