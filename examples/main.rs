@@ -20,8 +20,14 @@ async fn main() {
     let world = Arc::new(Mutex::new(World::new()));
     let world_capture = world.clone();
 
+    println!("\nEnter file name:");
+    let mut input_str = String::new();
+    stdin().read_line(&mut input_str).expect("invalid value");
+    let choice: String = input_str.trim().parse().unwrap();
+
+    println!("Selected file: {:?}", &choice);
     // local test file
-    let capture = ZwiftCapture::from_file(path::Path::new("ws.pcapng"));
+    let capture = ZwiftCapture::from_file(path::Path::new(&choice));
 
     let capture_thread = thread::spawn(move || {
         let mut counter: i64 = 0;
