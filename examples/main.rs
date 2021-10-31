@@ -3,15 +3,16 @@ use std::io::stdin;
 use std::thread;
 use std::time;
 use std::path;
-use std::iter::FromIterator;
-use pcap::Device;
 use warp::Filter;
 use zwift_capture::{Player, ZwiftCapture};
 use zwift_watcher::{World, PlayerGroup, PlayerData, PLAYER_GROUP_CAPACITY};
 use zwift_watcher::server::{handlers,models};
+use std::iter::FromIterator;
+use pcap::Device;
 
 
 const TICK: i64 = 1000;
+
 
 #[tokio::main]
 async fn main() {
@@ -20,23 +21,8 @@ async fn main() {
     let world_capture = world.clone();
     let world_filter = warp::any().map(move || world.clone());
 
-    // real capture device
-    let mut devices_list = Device::list().unwrap();
-    for (ix, device) in devices_list.iter().enumerate() {
-        let desc = match &device.desc {
-            Some(v) => v.clone(),
-            _ => String::from("---")
-        };
-        println!("{}: {} {:?}", ix, &device.name ,desc);
-    }
-    println!("\nPlease choose device:");
-    let mut input_str = String::new();
-    stdin().read_line(&mut input_str).expect("invalid value");
-    let choice: usize = input_str.trim().parse().unwrap();
-    let selected_device = devices_list.remove(choice);
-
-    println!("Selected device: {:?}", selected_device);
-    let capture = ZwiftCapture::from_device(selected_device);
+    // local test file
+    let capture = ZwiftCapture::from_file(path::Path::new("ws.pcapng"));
 
     let capture_thread = thread::spawn(move || {
         let mut counter: i64 = 0;
@@ -45,6 +31,9 @@ async fn main() {
         for players in capture { // .skip(20000) {
             let mut world_capture = world_capture.lock().unwrap();
             let _times = world_capture.push_players_batch(players).unwrap();
+
+            // only for local file
+            thread::sleep(time::Duration::from_millis(100));
 
             counter += 1;
             if counter % TICK == 0 {

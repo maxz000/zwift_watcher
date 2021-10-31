@@ -7,8 +7,9 @@ const PLAYER_HISTORY_CAPACITY: usize = 50; // ~ 100ms per player update == 5sec 
 const PLAYER_HISTORY_INTERPOLATION_MAX_TIME_DIFF: i64 = 100;
 const MAX_WORLD_TIME_DIFF: i64 = 5000; // 5 sec
 
+pub mod server;
 
-#[derive(Debug)]
+#[derive(Debug,Default)]
 struct PlayerHistory {
     // latest first
     data: Vec<Player>
@@ -153,7 +154,7 @@ impl PlayerData {
 }
 
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,Default)]
 pub struct PlayerGroup {
     players: Vec<i32>
 }
@@ -217,6 +218,7 @@ impl Iterator for PlayerGroupIter {
 }
 
 
+#[derive(Debug,Default)]
 pub struct World {
     pub world_time: i64,
 
