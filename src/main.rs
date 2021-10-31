@@ -8,7 +8,7 @@ use pcap::Device;
 use warp::Filter;
 use zwift_capture::{Player, ZwiftCapture};
 use zwift_watcher::{World, PlayerGroup, PlayerData, PLAYER_GROUP_CAPACITY};
-use zwift_watcher::server::{handlers,models};
+use zwift_watcher::server::{handlers,models,Routes};
 
 
 const TICK: i64 = 1000;
@@ -18,7 +18,6 @@ async fn main() {
     println!("Start!");
     let world = Arc::new(Mutex::new(World::new()));
     let world_capture = world.clone();
-    let world_filter = warp::any().map(move || world.clone());
 
     // real capture device
     let mut devices_list = Device::list().unwrap();
@@ -58,41 +57,7 @@ async fn main() {
         println!("Capture thread: done")
     });
 
-    let root_url = warp::path::end()
-        .and(world_filter.clone())
-        .and_then(handlers::api_root);
-
-    let get_group_to_watch_url = warp::get()
-        .and(warp::path("watch"))
-        .and(warp::path::end())
-        .and(warp::query::<models::WatchOptions>())
-        .and(world_filter.clone())
-        .and_then(handlers::get_group_to_watch);
-
-    let add_player_url = warp::post()
-        .and(warp::path("watch"))
-        .and(warp::path("add"))
-        .and(warp::path::end())
-        .and(warp::body::json())
-        .and(world_filter.clone())
-        .and_then(handlers::add_player_to_watch);
-
-    let clear_group_to_watch_url = warp::delete()
-        .and(warp::path("watch"))
-        .and(warp::path("clear"))
-        .and(warp::path::end())
-        .and(world_filter.clone())
-        .and_then(handlers::clear_group_to_watch);
-
-    let world_users_url = warp::get()
-        .and(warp::path("users"))
-        .and(warp::path::end())
-        .and(world_filter.clone())
-        .and_then(handlers::world_users);
-
-    let routes = root_url.or(get_group_to_watch_url)
-        .or(add_player_url).or(clear_group_to_watch_url)
-        .or(world_users_url);
+    let routes = Routes::new(world).generate();
     let _ = warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 
     let _ = capture_thread.join();
