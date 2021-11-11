@@ -7,12 +7,13 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+#zwift_capture = { path = "../zwift_capture" }
 zwift_capture = { git = "https://github.com/maxz000/zwift_capture", branch = "main" }
-serde = { version = "1.0.124", features = ["derive"] }
-serde_json = "1.0.64"
-tokio = { version = "1.4.0", features = ["full"] }
-warp = "0.3"
-pcap = { version = "0.8.1" }
+serde = { version = "1.0.130", features = ["derive"] }
+serde_json = "1.0.69"
+tokio = { version = "1.13.0", features = ["full"] }
+warp = "0.3.2"
+pcap = { version = "0.9.1" }
 
 [dev-dependencies]
-hex-literal = "0.3.1"
+hex-literal = "0.3.3"
