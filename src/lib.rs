@@ -18,13 +18,13 @@ struct PlayerHistory {
 impl PlayerHistory {
     pub fn new() -> Self {
         PlayerHistory {
-            data: Vec::with_capacity(PLAYER_HISTORY_CAPACITY)
+            data: Vec::with_capacity(PLAYER_HISTORY_CAPACITY + 1)
         }
     }
 
     pub fn from(new_player: Player) -> Self {
         let mut history = PlayerHistory {
-            data: Vec::with_capacity(PLAYER_HISTORY_CAPACITY)
+            data: Vec::with_capacity(PLAYER_HISTORY_CAPACITY + 1)
         };
         history.push(new_player);
         history
@@ -40,7 +40,7 @@ impl PlayerHistory {
             }
         }
         self.data.insert(insert_index, new_player);
-        if self.data.len() > PLAYER_HISTORY_CAPACITY - 1 {
+        if self.data.len() > PLAYER_HISTORY_CAPACITY {
             self.data.pop();
         }
     }
@@ -392,7 +392,7 @@ mod tests {
     fn player_history_push() {
         let mut player_history = PlayerHistory::new();
         let base_player = get_player_instance();
-        for x in (0..2000).step_by(100) {
+        for x in (0..6000).step_by(100) {
             let mut player = base_player.clone();
             player.world_time = x;
             player.time = x as i32;
@@ -401,7 +401,7 @@ mod tests {
             player_history.push(player);
         }
         // test elements count
-        assert_eq!(player_history.data.len(), PLAYER_HISTORY_CAPACITY - 1);
+        assert_eq!(player_history.data.len(), PLAYER_HISTORY_CAPACITY);
         // test order - latest first
         assert_eq!(player_history.data.iter().fold(i64::MAX, |accumulator, x| {
             if accumulator > x.world_time {
@@ -409,14 +409,14 @@ mod tests {
             } else {
                 i64::MIN
             }
-        }), player_history.data[PLAYER_HISTORY_CAPACITY - 2].world_time);
+        }), player_history.data[PLAYER_HISTORY_CAPACITY - 1].world_time);
     }
 
     #[test]
     fn player_history_push_unordered() {
         let mut player_history = PlayerHistory::new();
         let base_player = get_player_instance();
-        for x in (0..2000).step_by(100) {
+        for x in (0..6000).step_by(100) {
             let mut player = base_player.clone();
             player.world_time = x + x % 300;
             player.time = x as i32;
@@ -425,7 +425,7 @@ mod tests {
             player_history.push(player);
         }
         // test elements count
-        assert_eq!(player_history.data.len(), PLAYER_HISTORY_CAPACITY - 1);
+        assert_eq!(player_history.data.len(), PLAYER_HISTORY_CAPACITY);
         // test order - latest first
         assert_eq!(player_history.data.iter().fold(i64::MAX, |accumulator, x| {
             if accumulator > x.world_time {
@@ -433,7 +433,7 @@ mod tests {
             } else {
                 i64::MIN
             }
-        }), player_history.data[PLAYER_HISTORY_CAPACITY - 2].world_time);
+        }), player_history.data[PLAYER_HISTORY_CAPACITY - 1].world_time);
     }
 
     #[test]
