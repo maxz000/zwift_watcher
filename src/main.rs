@@ -35,13 +35,13 @@ async fn main() {
     let selected_device = devices_list.remove(choice);
 
     println!("Selected device: {:?}", selected_device);
-    let capture = ZwiftCapture::from_device(selected_device);
+    let mut capture = ZwiftCapture::from_device(selected_device);
 
     let capture_thread = thread::spawn(move || {
         let mut counter: i64 = 0;
         println!("Capture thread: start");
 
-        for players in capture { // .skip(20000) {
+        for players in &mut capture { // .skip(20000) {
             let mut world_capture = world_capture.lock().unwrap();
             let _times = world_capture.push_players_batch(players).unwrap();
 
@@ -54,6 +54,7 @@ async fn main() {
                 }
             }
         }
+        capture.print_stat();
         println!("Capture thread: done")
     });
 

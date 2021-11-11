@@ -37,13 +37,13 @@ async fn main() {
     println!("Selected file: {:?}", &args.dump_file);
     println!("Wait time: {:?}", &args.sleep);
     // local test file
-    let capture = ZwiftCapture::from_file(path::Path::new(&args.dump_file));
+    let mut capture = ZwiftCapture::from_file(path::Path::new(&args.dump_file));
 
     let capture_thread = thread::spawn(move || {
         let mut counter: i64 = 0;
         println!("Capture thread: start");
 
-        for players in capture { // .skip(20000) {
+        for players in &mut capture { // .skip(20000) {
             let mut world_capture = world_capture.lock().unwrap();
             let _times = world_capture.push_players_batch(players).unwrap();
 
@@ -61,6 +61,7 @@ async fn main() {
                 }
             }
         }
+        capture.print_stat();
         println!("Capture thread: done")
     });
 
